@@ -1,4 +1,4 @@
-name: mongo-sharding-repl
+name: sharding-repl-cache
 
 services:
   # Config Server (для метаданных шардирования)
@@ -83,6 +83,18 @@ services:
     networks:
       - mongo-network
 
+  # Redis Cache
+  redis:
+    container_name: redis
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - mongo-network
+
   # FastAPI Application
   pymongo_api:
     container_name: pymongo_api
@@ -91,11 +103,13 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - mongos
+      - redis
     ports:
       - "8080:8080"
     environment:
       MONGODB_URL: "mongodb://mongos:27017"
       MONGODB_DATABASE_NAME: "somedb"
+      REDIS_URL: "redis://redis:6379"
     networks:
       - mongo-network
 
@@ -107,6 +121,7 @@ volumes:
   shard2_primary_data:
   shard2_secondary1_data:
   shard2_secondary2_data:
+  redis_data:
 
 networks:
   mongo-network:

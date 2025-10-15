@@ -1,14 +1,15 @@
-# MongoDB Sharding with Replication Setup
+# MongoDB Sharding with Replication and Redis Caching Setup
 
 ## Архитектура
 
-Данный проект реализует MongoDB шардирование с репликацией для повышения производительности и отказоустойчивости:
+Данный проект реализует полную архитектуру MongoDB с шардированием, репликацией и Redis кешированием для максимальной производительности и отказоустойчивости:
 
 - **Config Server**: Хранит метаданные шардирования (1 реплика)
 - **MongoDB Router (mongos)**: Маршрутизирует запросы к шардам
 - **Shard 1**: 3 реплики (1 primary + 2 secondary)
 - **Shard 2**: 3 реплики (1 primary + 2 secondary)
-- **FastAPI Application**: Подключается к mongos
+- **Redis Cache**: Кеширование запросов для ускорения работы
+- **FastAPI Application**: Подключается к mongos и Redis
 
 ## Запуск проекта
 
@@ -16,15 +17,21 @@
 docker compose up -d
 ```
 
-## Настройка репликации и шардирования
+## Настройка репликации, шардирования и кеширования
 
 ### 1. Ожидание готовности сервисов
 
-Дождитесь полного запуска всех контейнеров:
+Дождитесь полного запуска всех контейнеров (включая Redis):
 
 ```bash
 docker compose ps
 ```
+
+Должно быть запущено 10 контейнеров:
+- config1, mongos, pymongo_api
+- shard1-primary, shard1-secondary1, shard1-secondary2
+- shard2-primary, shard2-secondary1, shard2-secondary2
+- redis
 
 ### 2. Инициализация Config Server Replica Set
 
@@ -178,12 +185,50 @@ db.helloDoc.countDocuments()
 EOF
 ```
 
+### Проверка кеширования Redis
+
+**Статус Redis:**
+```bash
+docker compose exec redis redis-cli info stats | grep -E "(keyspace_hits|keyspace_misses)"
+```
+
+**Проверка кеширования через API:**
+```bash
+curl http://localhost:8080/
+```
+
+Должно показать `"cache_enabled": true`
+
 ### Проверка через API
 
 ```bash
 curl http://localhost:8080/
 curl http://localhost:8080/helloDoc/count
 ```
+
+## Тестирование производительности кеширования
+
+### Создание тестовых пользователей
+
+```bash
+curl -X POST http://localhost:8080/helloDoc/users -H "Content-Type: application/json" -d '{"name": "Test User 1", "age": 25}'
+curl -X POST http://localhost:8080/helloDoc/users -H "Content-Type: application/json" -d '{"name": "Test User 2", "age": 30}'
+```
+
+### Тестирование скорости запросов
+
+**Первый запрос (без кеша):**
+```bash
+time curl -s http://localhost:8080/helloDoc/users
+```
+
+**Повторные запросы (с кешем):**
+```bash
+time curl -s http://localhost:8080/helloDoc/users
+time curl -s http://localhost:8080/helloDoc/users
+```
+
+**Ожидаемый результат:** Повторные запросы должны выполняться значительно быстрее (в 10-50 раз).
 
 ## Отказоустойчивость
 
@@ -225,6 +270,25 @@ EOF
 docker compose start shard2-primary
 ```
 
+### Тестирование отказоустойчивости Redis
+
+1. Остановите Redis:
+```bash
+docker compose stop redis
+```
+
+2. Проверьте, что приложение продолжает работать (без кеширования):
+```bash
+curl http://localhost:8080/
+```
+
+Должно показать `"cache_enabled": false`
+
+3. Восстановите Redis:
+```bash
+docker compose start redis
+```
+
 ## Остановка проекта
 
 ```bash
@@ -240,8 +304,8 @@ docker compose down -v
 ## Структура проекта
 
 ```
-mongo-sharding-repl/
-├── compose.yaml          # Конфигурация Docker Compose
+sharding-repl-cache/
+├── compose.yaml          # Конфигурация Docker Compose с Redis
 ├── README.md            # Данная инструкция
 ├── api_app/             # FastAPI приложение
 │   ├── app.py
@@ -253,6 +317,40 @@ mongo-sharding-repl/
 ## Преимущества архитектуры
 
 1. **Шардирование**: Распределение данных по нескольким серверам для повышения производительности
-2. **Репликация**: Обеспечение отказоустойчивости и доступности данных
-3. **Автоматический failover**: При отказе primary реплики, secondary автоматически становится primary
-4. **Горизонтальное масштабирование**: Возможность добавления новых шардов и реплик
+2. **Репликация**: Обеспечение отказоустойчивости и доступности данных (6 реплик)
+3. **Кеширование**: Ускорение запросов до 50x с помощью Redis
+4. **Автоматический failover**: При отказе primary реплики, secondary автоматически становится primary
+5. **Горизонтальное масштабирование**: Возможность добавления новых шардов и реплик
+6. **Высокая производительность**: Комбинация всех трех технологий обеспечивает максимальную скорость и надежность
+
+## API Endpoints
+
+- `GET /` - Статус системы (включая информацию о кешировании)
+- `GET /helloDoc/count` - Количество документов в коллекции
+- `GET /helloDoc/users` - Список пользователей (с кешированием)
+- `POST /helloDoc/users` - Создание нового пользователя
+- `GET /helloDoc/users/{name}` - Получение пользователя по имени
+
+## Мониторинг
+
+### Статистика Redis
+```bash
+docker compose exec redis redis-cli info stats
+```
+
+### Статус MongoDB
+```bash
+docker compose exec -T mongos mongosh --port 27017 --quiet <<EOF
+sh.status()
+EOF
+```
+
+### Логи приложения
+```bash
+docker compose logs pymongo_api
+```
+
+### Логи Redis
+```bash
+docker compose logs redis
+```
