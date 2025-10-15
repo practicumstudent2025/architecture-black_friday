@@ -25,8 +25,8 @@ docker compose up -d
 docker compose ps
 
 # ⚠️ ВАЖНО: Подождать 30-60 секунд для полной инициализации MongoDB
-# Затем выполнить инициализацию MongoDB (шардирование + репликация)
-# Следуйте подробным инструкциям в README.md этой директории
+# Затем выполнить инициализацию MongoDB (шардирование + репликация):
+./scripts/init-sharding.sh
 
 # После инициализации MongoDB запустить скрипт заполнения данными:
 ./scripts/mongo-init.sh
@@ -36,7 +36,7 @@ docker compose ps
 
 1. **Запуск сервисов**: `docker compose up -d`
 2. **Ожидание готовности**: 30-60 секунд
-3. **Инициализация MongoDB**: Выполнить команды из README.md (replica sets, sharding)
+3. **Инициализация MongoDB**: `./scripts/init-sharding.sh` (replica sets, sharding)
 4. **Заполнение данными**: `./scripts/mongo-init.sh` (создает 1000 документов)
 5. **Проверка работы**: Открыть http://localhost:8080
 
