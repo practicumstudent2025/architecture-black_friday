@@ -126,7 +126,7 @@ echo "🎯 9. Финальная проверка архитектуры..."
 
 # Проверяем количество документов
 DOC_COUNT=$(curl -s http://localhost:8080 | jq -r '.collections.helloDoc.documents_count')
-if [ "$DOC_COUNT" -ge 1000 ]; then
+if [ "$DOC_COUNT" != "null" ] && [ "$DOC_COUNT" -ge 1000 ]; then
     echo "   ✅ Документов в базе: $DOC_COUNT (≥ 1000)"
 else
     echo "   ❌ Недостаточно документов: $DOC_COUNT (< 1000)"
