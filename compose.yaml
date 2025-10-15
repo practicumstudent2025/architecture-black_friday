@@ -1,23 +1,69 @@
-services:
-  mongodb1:
-    container_name: mongodb1
-    image: dh-mirror.gitverse.ru/mongo:latest
-    volumes:
-      - mongodb1_data_container:/data/db
+name: mongo-sharding
 
+services:
+  # Config Server (для метаданных шардирования)
+  config1:
+    container_name: config1
+    image: dh-mirror.gitverse.ru/mongo:latest
+    command: mongod --configsvr --replSet configReplSet --port 27017 --bind_ip_all
+    volumes:
+      - config1_data:/data/db
+    networks:
+      - mongo-network
+
+  # MongoDB Router (mongos)
+  mongos:
+    container_name: mongos
+    image: dh-mirror.gitverse.ru/mongo:latest
+    command: mongos --configdb configReplSet/config1:27017 --port 27017 --bind_ip_all
+    depends_on:
+      - config1
+    ports:
+      - "27017:27017"
+    networks:
+      - mongo-network
+
+  # Shard 1
+  shard1:
+    container_name: shard1
+    image: dh-mirror.gitverse.ru/mongo:latest
+    command: mongod --shardsvr --replSet shard1ReplSet --port 27017 --bind_ip_all
+    volumes:
+      - shard1_data:/data/db
+    networks:
+      - mongo-network
+
+  # Shard 2
+  shard2:
+    container_name: shard2
+    image: dh-mirror.gitverse.ru/mongo:latest
+    command: mongod --shardsvr --replSet shard2ReplSet --port 27017 --bind_ip_all
+    volumes:
+      - shard2_data:/data/db
+    networks:
+      - mongo-network
+
+  # FastAPI Application
   pymongo_api:
     container_name: pymongo_api
     build: 
       context: api_app
       dockerfile: Dockerfile
     depends_on:
-      - mongodb1
+      - mongos
     ports:
-      - 8080:8080
+      - "8080:8080"
     environment:
-      MONGODB_URL: "mongodb://mongodb1"
+      MONGODB_URL: "mongodb://mongos:27017"
       MONGODB_DATABASE_NAME: "somedb"
-
+    networks:
+      - mongo-network
 
 volumes:
-  mongodb1_data_container:
+  config1_data:
+  shard1_data:
+  shard2_data:
+
+networks:
+  mongo-network:
+    driver: bridge
