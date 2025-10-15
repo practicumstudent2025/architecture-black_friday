@@ -17,7 +17,7 @@ sleep 10
 # 1. Инициализация Config Server Replica Set
 echo ""
 echo "🔧 1. Инициализация Config Server Replica Set..."
-docker compose exec -T config1 mongosh --port 27017 --quiet <<EOF
+docker compose exec -T config1 mongosh --quiet <<EOF
 rs.initiate({
   _id: "configReplSet",
   configsvr: true,
@@ -35,7 +35,7 @@ fi
 # 2. Инициализация Shard 1 Replica Set
 echo ""
 echo "🔧 2. Инициализация Shard 1 Replica Set (3 реплики)..."
-docker compose exec -T shard1-primary mongosh --port 27017 --quiet <<EOF
+docker compose exec -T shard1-primary mongosh --quiet <<EOF
 rs.initiate({
   _id: "shard1ReplSet",
   members: [
@@ -56,7 +56,7 @@ fi
 # 3. Инициализация Shard 2 Replica Set
 echo ""
 echo "🔧 3. Инициализация Shard 2 Replica Set (3 реплики)..."
-docker compose exec -T shard2-primary mongosh --port 27017 --quiet <<EOF
+docker compose exec -T shard2-primary mongosh --quiet <<EOF
 rs.initiate({
   _id: "shard2ReplSet",
   members: [
@@ -82,7 +82,7 @@ sleep 15
 # 4. Добавление шардов к mongos
 echo ""
 echo "🔧 4. Добавление шардов к mongos..."
-docker compose exec -T mongos mongosh --port 27017 --quiet <<EOF
+docker compose exec -T mongos mongosh --quiet <<EOF
 sh.addShard("shard1ReplSet/shard1-primary:27017")
 sh.addShard("shard2ReplSet/shard2-primary:27017")
 EOF
@@ -97,7 +97,7 @@ fi
 # 5. Включение шардирования для базы данных и коллекции
 echo ""
 echo "🔧 5. Включение шардирования для базы данных и коллекции..."
-docker compose exec -T mongos mongosh --port 27017 --quiet <<EOF
+docker compose exec -T mongos mongosh --quiet <<EOF
 sh.enableSharding("somedb")
 sh.shardCollection("somedb.helloDoc", { "_id": "hashed" })
 EOF
@@ -112,7 +112,7 @@ fi
 # 6. Проверка статуса шардирования
 echo ""
 echo "🔍 6. Проверка статуса шардирования..."
-docker compose exec -T mongos mongosh --port 27017 --quiet <<EOF
+docker compose exec -T mongos mongosh --quiet <<EOF
 sh.status()
 EOF
 
