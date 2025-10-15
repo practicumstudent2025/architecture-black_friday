@@ -23,23 +23,63 @@ services:
     networks:
       - mongo-network
 
-  # Shard 1
-  shard1:
-    container_name: shard1
+  # Shard 1 - Primary
+  shard1-primary:
+    container_name: shard1-primary
     image: dh-mirror.gitverse.ru/mongo:latest
     command: mongod --shardsvr --replSet shard1ReplSet --port 27017 --bind_ip_all
     volumes:
-      - shard1_data:/data/db
+      - shard1_primary_data:/data/db
     networks:
       - mongo-network
 
-  # Shard 2
-  shard2:
-    container_name: shard2
+  # Shard 1 - Secondary 1
+  shard1-secondary1:
+    container_name: shard1-secondary1
+    image: dh-mirror.gitverse.ru/mongo:latest
+    command: mongod --shardsvr --replSet shard1ReplSet --port 27017 --bind_ip_all
+    volumes:
+      - shard1_secondary1_data:/data/db
+    networks:
+      - mongo-network
+
+  # Shard 1 - Secondary 2
+  shard1-secondary2:
+    container_name: shard1-secondary2
+    image: dh-mirror.gitverse.ru/mongo:latest
+    command: mongod --shardsvr --replSet shard1ReplSet --port 27017 --bind_ip_all
+    volumes:
+      - shard1_secondary2_data:/data/db
+    networks:
+      - mongo-network
+
+  # Shard 2 - Primary
+  shard2-primary:
+    container_name: shard2-primary
     image: dh-mirror.gitverse.ru/mongo:latest
     command: mongod --shardsvr --replSet shard2ReplSet --port 27017 --bind_ip_all
     volumes:
-      - shard2_data:/data/db
+      - shard2_primary_data:/data/db
+    networks:
+      - mongo-network
+
+  # Shard 2 - Secondary 1
+  shard2-secondary1:
+    container_name: shard2-secondary1
+    image: dh-mirror.gitverse.ru/mongo:latest
+    command: mongod --shardsvr --replSet shard2ReplSet --port 27017 --bind_ip_all
+    volumes:
+      - shard2_secondary1_data:/data/db
+    networks:
+      - mongo-network
+
+  # Shard 2 - Secondary 2
+  shard2-secondary2:
+    container_name: shard2-secondary2
+    image: dh-mirror.gitverse.ru/mongo:latest
+    command: mongod --shardsvr --replSet shard2ReplSet --port 27017 --bind_ip_all
+    volumes:
+      - shard2_secondary2_data:/data/db
     networks:
       - mongo-network
 
@@ -61,8 +101,12 @@ services:
 
 volumes:
   config1_data:
-  shard1_data:
-  shard2_data:
+  shard1_primary_data:
+  shard1_secondary1_data:
+  shard1_secondary2_data:
+  shard2_primary_data:
+  shard2_secondary1_data:
+  shard2_secondary2_data:
 
 networks:
   mongo-network:
